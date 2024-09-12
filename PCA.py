@@ -12,15 +12,15 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
 # importing or loading the dataset
-dataset = pd.read_csv('20240905_175121.csv', names=["files", "rating"])
+dataset = pd.read_csv('data/20240905_175121.csv')
 path = 'frontalimages_manuallyaligne_greyscale/'
 #path = 'test'
 # %%
-dataset['files']
+dataset
 # %%
 faces_list = []
 
-for file in dataset['files']:
+for file in dataset.ImageName:
     img=imread(path+'/'+file)
     dim = img.shape
     face = pd.Series(img.flatten(),name=path)
@@ -62,8 +62,8 @@ for i in range (0,3):
         pca_keep[:, :n_components] = pca_transformed[:, :n_components]
         return (pca.inverse_transform(pca_keep[index])+avg).reshape(img.shape)
 
-    max_reconstructed = reconstruct(max_score_index, n_components=1)
-    min_reconstructed = reconstruct(min_score_index, n_components=1)
+    max_reconstructed = reconstruct(max_score_index, n_components=i)
+    min_reconstructed = reconstruct(min_score_index, n_components=i)
 
     # Visualize the min, mean, and max images
     # Min Image
