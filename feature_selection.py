@@ -1,139 +1,253 @@
-# %%
+# %% 
+# Load the package
 import cv2
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from matplotlib.image import imread
 from pathlib import Path
-import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.decomposition import PCA
 from sklearn.feature_selection import SequentialFeatureSelector
 from sklearn.linear_model import LinearRegression
-from tqdm import tqdm
-# Read the CSV file and save it to X and Y
-Y = []
-X = []
-directory_path = Path('data/')
 
+# %%
+def data_loading(rating_dir, image_dir):
+    """
+    Read the CSV file and load image data.
 
-# Set the target size for resizing the images (e.g., 128x128)
+    Args:
+        rating_dir (str): Directory containing the rating CSV files.
+        image_dir (str): Directory containing the images.
 
-print("Reading files...")
-for file in directory_path.rglob('*.csv'):  
-    data = pd.read_csv(file)
-    
-    for img_name in data.ImageName:
-        img_path = "frontalimages_manuallyaligne_greyscale/" + img_name
+    Returns:
+        np.ndarray: Array of flattened face images.
+        np.ndarray: Array of corresponding ratings.
+        tuple: Size of the images.
+    """
+    Y = []
+    X = []
+
+    directory_path = Path(rating_dir)
+
+    print("Reading files...")
+    for file in directory_path.rglob('*.csv'):  
+        data = pd.read_csv(file)
         
-        img=imread(str(img_path))
+        for img_name in data.ImageName:
+            img_path = image_dir + img_name
+            
+            img=imread(str(img_path))
+            img_size = img.shape
+            X.append(img.flatten())  # Flatten the image to 1D array
         
         
-        
-        X.append(img.flatten())  # Flatten the image to 1D array
-    
-    # Extend the labels
-    Y.extend(data.Rating)
-    # Convert list of flattened images to a numpy array
-faces = np.array(X)
-labels = np.array(Y)
+        Y.extend(data.Rating)
+    return np.array(X), np.array(Y), img_size
+
+# %%
+def preprocessing(faces, labels):
+    """
+    Normalize the face images by subtracting the average image, and scale ratings to the range [0, 1].
+
+    Args:
+        faces (np.ndarray): Array of flattened face images.
+        labels (np.ndarray): Array of ratings.
+
+     Returns:
+        np.ndarray: Face images with average image removed.
+        np.ndarray: Scaled ratings.
+    """
+
+    # Data preprocessing
+    print("Subtract the image and Normalize labels...")
+    # Compute the average image
+    avg = np.mean(faces, axis=0)
+    # Subtract the average image from each image
+    faces = faces -avg
+
+    # Initialize MinMaxScaler to scale data to range 0-1
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    # Reshape labels into 2D input)
+    labels = labels.reshape(-1, 1)
+    # Normalize
+    normalized_labels = scaler.fit_transform(labels)
+    # Flatten it back to 1D 
+    normalized_labels = normalized_labels.reshape(faces.shape[0],1)
+
+    return faces, normalized_labels
 
 
 # %%
-print("Normalize the image and labels...")
-# Compute the average image
-avg = np.mean(faces, axis=0)
+def select_features(pca_transformed, labels):
+    """
+    Use forward selection to select the relevant PCs for the model
 
-# Subtract the average image from each image
-faces = faces -avg
+    Args:
+        pca_transformed (np.ndarray): PCA-transformed face images.
+        labels (np.ndarray): Scaled ratings.
+
+    Returns:
+        LinearRegression: A linear regression model.
+        np.ndarray: Indices of selected PCA components.
+    """
+    print("Processing Feature Selction...")
+    # Create a linear regression model
+    lr = LinearRegression()
+
+    # Use sequential feature selector to select 5 features
+    n_features_to_select = 5
+    sfs_forward = SequentialFeatureSelector(
+        lr, n_features_to_select=n_features_to_select, direction='forward'
+    )
+    # Fit Sequential Feature Selector
+    print(f"Selecting {n_features_to_select} features:")
+    sfs_forward.fit(pca_transformed , labels)
+
+    # Show the chosen features
+    selected_features = sfs_forward.get_support(indices=True)
+    # Print the selected features
+    print("The selected feature indices are:", selected_features)
+    return lr, selected_features
+
+
 # %%
-# Initialize MinMaxScaler to scale data to range 0-1
-scaler = MinMaxScaler(feature_range=(0, 1))
+def visualize_PC(pca_data):
+    """
+    Visualize images corresponding to the minimum, mean, and maximum projections onto selected PCA components.
 
-# Reshape labels if it's a 1D array (scikit-learn expects 2D input)
-labels = labels.reshape(-1, 1)
+    Args:
+        pca_data (dict): A dictionary containing the PCA model, average image, image size, transformed data, and selected features.
+    """
+    print("Visualizing selected PCA components...")
+    
+    pca = pca_data['pca']
+    avg = pca_data['avg']
+    img_size = pca_data['img_size']
+    pca_transformed = pca_data['pca_transformed']
+    selected_features = pca_data['selected_features']
 
-# Fit the scaler to your data and transform it
-normalized_labels = scaler.fit_transform(labels)
+    plt.figure(figsize=[15, 8])
+    for i, component in enumerate(selected_features):
+        pca_component = pca_transformed[:, component]
+        max_idx, min_idx = np.argmax(pca_component), np.argmin(pca_component)
+        
+        def reconstruct(index):
+            pc_space = np.zeros_like(pca_transformed)
+            pc_space[:, component] = pca_transformed[:, component]
+            return (pca.inverse_transform(pc_space[index]) + avg).reshape(img_size)
+        
+        plt.subplot(5, 3, 3 * i + 1)
+        plt.imshow(reconstruct(min_idx), cmap='gray')
+        plt.title(f"Min Projection (PC {component})")
+        plt.axis('off')
+        
+        plt.subplot(5, 3, 3 * i + 2)
+        plt.imshow(avg.reshape(img_size), cmap='gray')
+        plt.title("Mean Image")
+        plt.axis('off')
+        
+        plt.subplot(5, 3, 3 * i + 3)
+        plt.imshow(reconstruct(max_idx), cmap='gray')
+        plt.title(f"Max Projection (PC {component})")
+        plt.axis('off')
+    
+    plt.savefig('Selected_PCA_components.jpg')
+    plt.show()
 
-# If you want to flatten it back to 1D (in case of a single feature):
-normalized_labels = normalized_labels.reshape(faces.shape[0],1)
+#%%
+def generate_images(model, ratings):
+    """
+    Generate images based on provided ratings and a trained model.
+
+    Args:
+        model (LinearRegression): Trained linear regression model.
+        ratings (list): List of ratings for each feature.
+
+    Returns:
+        list: Generated images corresponding to the ratings.
+    """
+    generated_images = []
+    delta, w = model.intercept_, model.coef_
+    
+    print("Generating images based on provided ratings...")
+    for rating in ratings:
+        generated_images.append((rating - delta) * w / np.linalg.norm(w) ** 2)
+    
+    return generated_images
 
 
+#%%
+def visualize_generated(generated, pca_data, ratings_generate):
+    """
+    Visualize the generated images.
+
+    Args:
+        generated_images (list): List of generated images.
+        pca_data (dict): Dictionary containing PCA data.
+        ratings_generate (list): List of ratings used to generate the images.
+    """
+    fig, axes = plt.subplots(1, len(ratings_generate), figsize=(20, 5))
+    for i, image in enumerate(generated):
+        # Calculate the image data
+        image_data = (image @ pca_data['pca'].components_[pca_data['selected_features'], :] * 0.05 + pca_data['avg']).reshape(pca_data['img_size'])
+         # Display the image in the appropriate subplot
+        axes[i].imshow(image_data, cmap='gray')
+        axes[i].set_title(f'Rating {ratings_generate[i]}')
+        axes[i].axis('off')
+    
+    plt.tight_layout()
+    plt.savefig('Generated_image.jpg')
+    plt.show()
+    
 # %% 
-print("Processing PCA....")
-pca = PCA()
-pca.fit(faces)
+def PCA_transform(ratings_generate):
+    """
+    Perform PCA, select relevant features, and generate images based on specified ratings.
 
-components = pca.components_
-# Visually present the first few PCA components as images
-pca_transformed = pca.transform(faces)
-
-# %%
-print("Processing Feature Selction...")
-lr = LinearRegression()
-
-# Sequential Feature Selector
-n_features_to_select = 5
-sfs_forward = SequentialFeatureSelector(
-    lr, n_features_to_select=n_features_to_select, direction='forward'
-)
-
-
-# Fit Sequential Feature Selector
-print(f"Selecting {n_features_to_select} features:")
-with tqdm(total=n_features_to_select) as pbar:
-    sfs_forward.fit(pca_transformed , normalized_labels)
-    for _ in range(n_features_to_select):
-        pbar.update(1)  # Update progress for each feature selected
-
-# %%
-selected_features = sfs_forward.get_support(indices=True)
-
-# Print the selected features
-print("The selected feature indices are:", selected_features)
-
-# Optionally, you can retrieve the actual PCA components associated with the selected features
-print("The selected PCA components are:")
-for idx in selected_features:
-    print(idx, pca.components_[idx])
-# %%a
-plt.figure(figsize=[15,8])
-for i, component_index in enumerate(selected_features):
-
-    # Select the PCA component to analyze 
-    pca_component = pca_transformed[:, component_index]
-    # Find the images with the maximum and minimum projection scores for the component
-    max_score_index = np.argmax(pca_component)
-    min_score_index = np.argmin(pca_component)
-
-    # Reconstruct images 
-    def reconstruct(index, n_components=1):
-        # Keep only the first n_components, set the rest to 0
-        pca_keep = np.zeros_like(pca_transformed)
-        pca_keep[:, n_components] = pca_transformed[:, n_components]
-        return (pca.inverse_transform(pca_keep[index])+avg).reshape(img.shape)
-
-    max_reconstructed = reconstruct(max_score_index, n_components=component_index)
-    min_reconstructed = reconstruct(min_score_index, n_components=component_index)
-
-    # Visualize the min, mean, and max images
-    # Min Image
-    plt.subplot(5, 3, 3*i + 1)  # 3 rows, 3 columns, fill in order
-    plt.imshow(min_reconstructed, cmap='gray')
-    plt.title(f"Min Comp {component_index}")
-    plt.axis('off')
+    Args:
+        ratings_generate (list): Ratings to use for generating images.
+    """
     
-    # Mean Image
-    plt.subplot(5, 3, 3*i + 2)
-    plt.imshow(avg.reshape(img.shape), cmap='gray')
-    plt.title(f"Mean Image")
-    plt.axis('off')
+    faces, labels, img_size = data_loading(rating_dir='data/', image_dir="frontalimages_manuallyaligne_greyscale/")
+    
+    avg = np.mean(faces, axis=0)
+    
+    normal_faces, normal_labels = preprocessing(faces, labels)
 
-    # Max Image
-    plt.subplot(5, 3, 3*i + 3)
-    plt.imshow(max_reconstructed, cmap='gray')
-    plt.title(f"Max Comp {component_index}")
-    plt.axis('off')
-plt.savefig('Selected_PCA_component.jpg')
-plt.show()
-# %%
+    # Run PCA and transform image to the PCA
+    print("Processing PCA....")
+    # Fit the PCA
+    pca = PCA()
+    pca.fit(normal_faces)
+    
+    # Transform the image
+    transformed = pca.transform(normal_faces)
+
+    model, features = select_features(transformed, normal_labels)
+    
+    pca_data = {
+                'pca': pca,
+                'avg': avg,
+                'img_size': img_size,
+                'pca_transformed': transformed,
+                'selected_features': features
+                }
+
+    visualize_PC(pca_data)
+    
+    model.fit(transformed[:, features], normal_labels)
+    generated = generate_images(model, ratings_generate)
+    
+    
+    visualize_generated(generated, pca_data, ratings_generate)
+
+    
+
+#%% 
+
+if __name__ == "__main__":
+    ratings_generate = [-9,-7,-5,-3,-1,0,1,3,5,7,9]
+    
+    PCA_transform(ratings_generate)
+
