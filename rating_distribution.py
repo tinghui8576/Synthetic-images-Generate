@@ -27,7 +27,7 @@ plt.title('Distribution of Ratings')
 plt.xlabel('Rating')
 plt.ylabel('Frequency')
 plt.grid(True, which='both', linestyle='--', linewidth=0.5)
-plt.savefig("distribution.jpg")
+plt.savefig("figures/distribution.jpg")
 plt.show()
 
 

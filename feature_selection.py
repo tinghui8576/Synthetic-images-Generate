@@ -152,7 +152,7 @@ def visualize_PC(pca_data):
         plt.title(f"Max Projection (PC {component})")
         plt.axis('off')
     
-    plt.savefig('Selected_PCA_components.jpg')
+    plt.savefig('figures/Selected_PCA_components.jpg')
     plt.show()
 
 #%%
@@ -197,7 +197,7 @@ def visualize_generated(generated, pca_data, ratings_generate):
         axes[i].axis('off')
     
     plt.tight_layout()
-    plt.savefig('Generated_image.jpg')
+    plt.savefig('figures/Generated_image.jpg')
     plt.show()
     
 # %% 

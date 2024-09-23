@@ -41,7 +41,6 @@ pca = PCA()
 pca.fit(faces)
 
 components = pca.components_
-print(components)
 # Visually present the first few PCA components as images
 pca_transformed = pca.transform(faces)
 
@@ -83,7 +82,7 @@ for i in range (0,3):
     plt.imshow(max_reconstructed, cmap='gray')
     plt.title(f"Max Comp {component_index}")
     plt.axis('off')
-plt.savefig('PCA_component.jpg')
+plt.savefig('figures/PCA_component.jpg')
 plt.show()
 
 # %%
@@ -111,7 +110,7 @@ plt.xticks(ticks=x_ticks, labels=x_ticks, rotation=45, ha='right')
 
 
 plt.grid(axis='y', linestyle='--', alpha=0.7)
-plt.savefig('PCA_explained_variance.jpg')
+plt.savefig('figures/PCA_explained_variance.jpg')
 plt.show()
 
 # %%
