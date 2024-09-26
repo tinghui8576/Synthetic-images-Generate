@@ -170,6 +170,8 @@ def generate_images(model, ratings):
     generated_images = []
     delta, w = model.intercept_, model.coef_
     
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    ratings = scaler.fit_transform(np.array(ratings).reshape(-1, 1))
     print("Generating images based on provided ratings...")
     for rating in ratings:
         generated_images.append((rating - delta) * w / np.linalg.norm(w) ** 2)
@@ -190,7 +192,7 @@ def visualize_generated(generated, pca_data, ratings_generate):
     fig, axes = plt.subplots(1, len(ratings_generate), figsize=(20, 5))
     for i, image in enumerate(generated):
         # Calculate the image data
-        image_data = (image @ pca_data['pca'].components_[pca_data['selected_features'], :] * 0.05 + pca_data['avg']).reshape(pca_data['img_size'])
+        image_data = (image @ pca_data['pca'].components_[pca_data['selected_features'], :]+ pca_data['avg']).reshape(pca_data['img_size'])
          # Display the image in the appropriate subplot
         axes[i].imshow(image_data, cmap='gray')
         axes[i].set_title(f'Rating {ratings_generate[i]}')
@@ -247,7 +249,9 @@ def PCA_transform(ratings_generate):
 #%% 
 
 if __name__ == "__main__":
-    ratings_generate = [-9,-7,-5,-3,-1,0,1,3,5,7,9]
+    ratings_generate = [1,2,3,4,5,6,7,8,9]
     
     PCA_transform(ratings_generate)
 
+
+# %%
