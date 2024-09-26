@@ -1,0 +1,10 @@
+os
+glob2
+numpy
+pandas
+pathlib
+seaborn
+PsychoPy
+matplotlib
+scikit-learn
+opencv-python
