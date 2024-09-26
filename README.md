@@ -1,5 +1,5 @@
 # 02458 Cognitive Modelling
-## Linear Encoding to generate synthetic face images 💼
+## Linear Encoding to generate synthetic face images
 
 ### Authors
 - Ting-Hui Cheng (s232855)
