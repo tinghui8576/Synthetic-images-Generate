@@ -40,8 +40,7 @@ with open(filename, "w") as f:
             # draw and show the image and the rating scale
             while ratingScale.noResponse:
                 stimulus.draw()
-                ratingScale.draw()
-                win.flip()
+                      win.flip()
 
                 # Check for key presses
                 keys = event.getKeys()

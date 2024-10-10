@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 # Read the CSV file and save it to X and Y
 Y = []
-directory_path = Path('data/')
+directory_path = Path('data/face_rating')
 
 
 for i, file in enumerate(directory_path.rglob('*.csv')):  

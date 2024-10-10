@@ -98,7 +98,7 @@ def select_features(pca_transformed, labels):
     # Use sequential feature selector to select 5 features
     n_features_to_select = 5
     sfs_forward = SequentialFeatureSelector(
-        lr, n_features_to_select=n_features_to_select, direction='forward'
+        lr, n_features_to_select='auto', direction='forward'
     )
     # Fit Sequential Feature Selector
     print(f"Selecting {n_features_to_select} features:")
@@ -193,7 +193,8 @@ def visualize_generated(generated, pca_data, ratings_generate):
     for i, image in enumerate(generated):
         # Calculate the image data
         image_data = (image @ pca_data['pca'].components_[pca_data['selected_features'], :]+ pca_data['avg']).reshape(pca_data['img_size'])
-         # Display the image in the appropriate subplot
+        # Display the image in the appropriate subplot
+        plt.imsave(f'figures/generated_faces/{i}.jpg', image_data, cmap='gray')
         axes[i].imshow(image_data, cmap='gray')
         axes[i].set_title(f'Rating {ratings_generate[i]}')
         axes[i].axis('off')
@@ -211,7 +212,7 @@ def PCA_transform(ratings_generate):
         ratings_generate (list): Ratings to use for generating images.
     """
     
-    faces, labels, img_size = data_loading(rating_dir='data/', image_dir="frontalimages_manuallyaligne_greyscale/")
+    faces, labels, img_size = data_loading(rating_dir='data/face_rating', image_dir="frontalimages_manuallyaligne_greyscale/")
     
     avg = np.mean(faces, axis=0)
     
@@ -220,12 +221,12 @@ def PCA_transform(ratings_generate):
     # Run PCA and transform image to the PCA
     print("Processing PCA....")
     # Fit the PCA
-    pca = PCA()
+    pca = PCA(n_components=0.95)
     pca.fit(normal_faces)
     
     # Transform the image
     transformed = pca.transform(normal_faces)
-
+    
     model, features = select_features(transformed, normal_labels)
     
     pca_data = {
@@ -236,8 +237,9 @@ def PCA_transform(ratings_generate):
                 'selected_features': features
                 }
 
-    visualize_PC(pca_data)
-    
+    #visualize_PC(pca_data)
+    selected_variance_explained = pca.explained_variance_ratio_[features].sum() * 100
+    print(f"After selection, the variance explained: {selected_variance_explained:2f}%")
     model.fit(transformed[:, features], normal_labels)
     generated = generate_images(model, ratings_generate)
     
