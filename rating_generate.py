@@ -17,8 +17,8 @@ class RatingApp:
         self.image_folder = image_folder
         self.output_file = output_file
         self.total_observations = total_observations  # Total number of observations you want
-        self.positive_images = [f for f in os.listdir(image_folder) if f.split('.')[0].isdigit() and int(f.split('.')[0]) > 3]
-        self.negative_images = [f for f in os.listdir(image_folder) if f.split('.')[0].isdigit() and int(f.split('.')[0]) <= 3]
+        self.positive_images = [f for f in os.listdir(image_folder) if f.split('.')[0].isdigit() and int(f.split('.')[0]) > 4]
+        self.negative_images = [f for f in os.listdir(image_folder) if f.split('.')[0].isdigit() and int(f.split('.')[0]) <= 4]
         
         # We want exactly 50 positive and 50 negative observations
         self.positive_observations = 50
