@@ -11,25 +11,24 @@ import random
 
 # Create the rating system
 class RatingApp:
-    def __init__(self, master, image_folder, output_file, total_observations=100):
+    def __init__(self, master, image_folder, output_file, total_observations=270):
         self.master = master
         self.master.title("Image Rating System")
         self.image_folder = image_folder
         self.output_file = output_file
-        self.total_observations = total_observations  # Total number of observations you want
-        self.positive_images = [f for f in os.listdir(image_folder) if f.split('.')[0].isdigit() and int(f.split('.')[0]) > 4]
-        self.negative_images = [f for f in os.listdir(image_folder) if f.split('.')[0].isdigit() and int(f.split('.')[0]) <= 4]
+        #self.total_observations = total_observations  # Total number of observations you want
         
-        # We want exactly 50 positive and 50 negative observations
-        self.positive_observations = 50
-        self.negative_observations = 50
+        #Create 30 observation 
+        self.observations = 30
+        self.total_observations = self.observations * 9  # Total images to rate
         
-        # Repeat the positive and negative images to achieve 50 observations each
-        self.positive_selection = random.choices(self.positive_images, k=self.positive_observations)
-        self.negative_selection = random.choices(self.negative_images, k=self.negative_observations)
+        # Create a list with each image repeated 30 times
+        self.all_images = []
+        unique_images = [f for f in os.listdir(image_folder) if f.split('.')[0].isdigit()]
+        for image in unique_images:
+            self.all_images.extend([image] * self.observations)
 
-        # Combine positive and negative selections and shuffle them
-        self.all_images = self.positive_selection + self.negative_selection
+        # Shuffle the images
         random.shuffle(self.all_images)
 
         self.index = 0
